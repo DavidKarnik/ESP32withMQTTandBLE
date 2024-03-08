@@ -1,6 +1,6 @@
 ## Bachelor thesis
 
- Compact system for data collection and processing in the Internet of Things
+ #### Compact system for data collection and processing in the Internet of Things
 
 Technical university of Liberec </br>
 Faculty of Mechatronics Informatics and Interdisciplinary Studies </br>
@@ -10,9 +10,9 @@ Year: 2023/2024 </br>
 
 ---
 
-### Bakalářská práce
+## Bakalářská práce
 
-Kompaktní systém pro sběr a zpracování dat v prostředí internetu věcí
+#### Kompaktní systém pro sběr a zpracování dat v prostředí internetu věcí
 
 Technická univerzita v Liberci </br>
 Fakulta mechatroniky, informatiky a mezioborových studií </br>
