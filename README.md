@@ -1,4 +1,4 @@
-Bachalor Work
+Bachelor Work
 
  Compact system for data collection and processing in the Internet of Things
 
