@@ -1,4 +1,4 @@
-Bachelor thesis
+## Bachelor thesis
 
  Compact system for data collection and processing in the Internet of Things
 
@@ -10,7 +10,7 @@ Year: 2023/2024 </br>
 
 ---
 
-Bakalářská práce
+### Bakalářská práce
 
 Kompaktní systém pro sběr a zpracování dat v prostředí internetu věcí
 
