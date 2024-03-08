@@ -1,4 +1,4 @@
-Bachelor Work
+Bachelor thesis
 
  Compact system for data collection and processing in the Internet of Things
 
