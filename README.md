@@ -2,8 +2,11 @@ Bachalor Work
 
  Compact system for data collection and processing in the Internet of Things
 
-Technical university of Liberec
-IT - AI
+Technical university of Liberec </br>
+Faculty of Mechatronics Informatics and Interdisciplinary Studies </br>
+Study programme: Information Technology </br>
+Specialisation: Applied Informatics (AI) </br>
+Year: 2023/2024 </br>
 
 ---
 
