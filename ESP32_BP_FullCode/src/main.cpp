@@ -19,7 +19,7 @@
 
 BLEService myService(SERVICE_UUID);
 // 20 b -> maximální délka zprávy
-BLEStringCharacteristic myCharacteristic(CHARACTERISTIC_UUID, BLERead | BLEBroadcast, 20);
+BLEStringCharacteristic myCharacteristic(CHARACTERISTIC_UUID, BLERead | BLENotify, 20);
 
 // Advertising parameters (info about advertiser) should have a global scope. Do NOT define them in 'setup' or in 'loop'
 // const uint8_t manufactData[4] = {0x01, 0x02, 0x03, 0x04};
@@ -193,7 +193,7 @@ String writeToFileAndGetContext(String message)
     }
 
     // Přidání zprávy do souboru
-    fileA.write((const uint8_t*)message.c_str(), message.length());
+    fileA.write((const uint8_t *)message.c_str(), message.length());
     fileA.seek(0); // Přesun na začátek souboru pro čtení
 
     // Čtení obsahu souboru
@@ -298,27 +298,38 @@ void setUpBLE()
   if (!BLE.begin())
   {
     Serial.println("failed to initialize BLE!");
+    return;
     // throw "Nepodarilo se inicializovat BLE.";
   }
 
-  myService.addCharacteristic(myCharacteristic);
-  BLE.addService(myService);
+  // myService.addCharacteristic(myCharacteristic);
+  // BLE.addService(myService);
 
   // Build scan response data packet
-  BLEAdvertisingData scanData;
+  // BLEAdvertisingData scanData;
+
   // Set parameters for scan response packet
-  scanData.setLocalName("Test enhanced advertising");
+  // scanData.setLocalName("Test enhanced advertising");
+
   // Copy set parameters in the actual scan response packet
-  BLE.setScanResponseData(scanData);
+  // BLE.setScanResponseData(scanData);
 
   // Build advertising data packet
-  BLEAdvertisingData advData;
+  // BLEAdvertisingData advData;
+
   // Set parameters for advertising packet
   // advData.setManufacturerData(0x004C, manufactData, sizeof(manufactData));
-  advData.setAdvertisedService(myService);
+  // advData.setAdvertisedService(myService);
+
   // advData.setAdvertisedServiceData(0xfff0, serviceData, sizeof(serviceData));
   // Copy set parameters in the actual advertising packet
-  BLE.setAdvertisingData(advData);
+  // BLE.setAdvertisingData(advData);
+
+  // SETUP BLE ADVERTISING DATA
+  BLE.setLocalName("ESP32_BLE_Server");
+  BLE.setAdvertisedService(myService);
+  myService.addCharacteristic(myCharacteristic);
+  BLE.addService(myService);
 
   BLE.advertise();
   Serial.println("advertising ...");
@@ -368,28 +379,42 @@ void task2(void *pvParameters)
 {
   for (;;)
   {
-    // delay() hlavně na jádře 1, aby se správně jádro uvedlo do provozu
-    delay(100);
-    digitalWrite(ledPin2, isLED2On ? HIGH : LOW);
-    // portENTER_CRITICAL(&muxCore1);
-    if (runTaskCore1)
+    BLEDevice central = BLE.central();
+    // Is some device connected to BLE server?
+    if (central)
     {
-      xSemaphoreTake(mutex, portMAX_DELAY);
+      while (central.connected())
+      {
+        // delay() hlavně na jádře 1, aby se správně jádro uvedlo do provozu
+        delay(100);
+        digitalWrite(ledPin2, isLED2On ? HIGH : LOW);
+        // portENTER_CRITICAL(&muxCore1);
+        if (runTaskCore1)
+        {
+          // Serial.print("Connected to central: ");
+          // Serial.println(BLE.central().address());
+          xSemaphoreTake(mutex, portMAX_DELAY);
 
-      // writeToFile("1");
-      // writeToFileAndGetContext("1");
+          myCharacteristic.writeValue("Hello from ESP32");
+          
+          xSemaphoreGive(mutex);
+          //   xSemaphoreTake(mutex, portMAX_DELAY);
 
-      // readFile();
+          //   // writeToFile("1");
+          //   // writeToFileAndGetContext("1");
 
-      // Posílání string zpravy přes BLE charakteristiku
-      myCharacteristic.writeValue("hello");
-      BLE.poll();
+          //   // readFile();
 
-      xSemaphoreGive(mutex);
+          //   // Posílání string zpravy přes BLE charakteristiku
+          //   myCharacteristic.writeValue("Hello from ESP32");
+
+          //   xSemaphoreGive(mutex);
+        }
+        delay(500);
+      }
+      // portEXIT_CRITICAL(&muxCore1);
     }
-    // portEXIT_CRITICAL(&muxCore1);
-
-    delay(2000);
+    delay(500);
   }
 }
 
