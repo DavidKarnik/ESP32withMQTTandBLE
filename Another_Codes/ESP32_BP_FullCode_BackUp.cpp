@@ -27,7 +27,7 @@ const int rxPin = 26;
 
 BLEService myService(SERVICE_UUID);
 // 20 b -> maximální délka zprávy
-const int maxMessLengthInBites = 1024;
+const int maxMessLengthInBites = 256;
 BLEStringCharacteristic myCharacteristic(CHARACTERISTIC_UUID, BLERead | BLENotify, maxMessLengthInBites);
 // uint32_t pinStatic = 1234; // Statický PIN pro připojení k BLE
 // Nastavení šifrovacího klíče (PINu) na 6-místný kód
@@ -38,7 +38,7 @@ BLEStringCharacteristic myCharacteristic(CHARACTERISTIC_UUID, BLERead | BLENotif
 // const uint8_t serviceData[3] = {0x00, 0x01, 0x02};
 
 const char *filename = "/soubor.txt"; // Název sdíleného souboru na SPIFFS
-File dataFile;                        // Proměnná pro práci se souborem
+File fileA;                           // Proměnná pro práci se souborem
 
 const int interruptPinCore0 = 12;
 const int interruptPinCore1 = 14;
@@ -48,7 +48,7 @@ const int ledPin2 = 27; // druhá LED na pin 18
 
 // String sharedString = "";     // Společná sdílená proměnná pro obě jádra, testing
 // SemaphoreHandle_t mutex; // Mutex pro synchronizaci přístupu k sdílené proměnné, souboru
-std::mutex fileMutex; // Mutex pro synchronizaci přístupu k souboru
+std::mutex fileMutex;
 
 portMUX_TYPE muxCore0 = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE muxCore1 = portMUX_INITIALIZER_UNLOCKED;
@@ -59,10 +59,10 @@ volatile bool runTaskCore1 = true; // Příznak pro určení, zda má jádro 1 p
 volatile bool isLED1On = false; // Příznak pro určení, zda má LED 1 svítit
 volatile bool isLED2On = false; // Příznak pro určení, zda má LED 2 svítit
 
-const char *ssid = "ssid"; // SSID (WiFi name)
-const char *password = "pass";     // WIFI password
+const char *ssid = "ssid";          // SSID (WiFi name)
+const char *password = "pass"; // WIFI password
 // my_mosquitto_broker_IP_address
-const char *mqtt_server = "ip_broker";
+const char *mqtt_server = "ip";
 const char *mqttTopic = "topic";
 const int QoS = 0;
 
@@ -119,16 +119,16 @@ void writeToFile(String message)
   {
     // Otevření souboru pro zápis (pokud neexistuje, bude vytvořen)
     // FILE_WRITE - zápis do zadaného souboru (tím se přepíše obsah, který se již v souboru nachází)
-    dataFile = SPIFFS.open(filename, FILE_WRITE);
-    if (!dataFile)
+    fileA = SPIFFS.open(filename, FILE_WRITE);
+    if (!fileA)
     {
       throw "Nepodarilo se otevrit soubor pro zapis.";
     }
 
     // Zápis do souboru
-    // dataFile.println(message);
-    dataFile.println(message);
-    dataFile.close();
+    // fileA.println(message);
+    fileA.println(message);
+    fileA.close();
 
     // Serial.println("\nData byla zapsana do souboru.");
   }
@@ -142,21 +142,21 @@ void readFile()
 {
   try
   {
-    dataFile = SPIFFS.open(filename, FILE_READ);
-    if (!dataFile)
+    fileA = SPIFFS.open(filename, FILE_READ);
+    if (!fileA)
     {
       throw "Nepodarilo se otevrit soubor pro cteni.";
     }
 
     // Serial.println("\nObsah souboru:");
-    dataFile.seek(0); // Move the file pointer to the beginning of the file
-    while (dataFile.available())
+    fileA.seek(0); // Move the file pointer to the beginning of the file
+    while (fileA.available())
     {
-      Serial.write(dataFile.read());
+      Serial.write(fileA.read());
     }
     Serial.println();
 
-    dataFile.close();
+    fileA.close();
   }
   catch (const char *error)
   {
@@ -169,20 +169,19 @@ String getFileContext()
   String out = "";
   try
   {
-    dataFile = SPIFFS.open(filename, FILE_READ);
-    if (!dataFile)
+    fileA = SPIFFS.open(filename, FILE_READ);
+    if (!fileA)
     {
       throw "Nepodarilo se otevrit soubor pro cteni.";
     }
 
     // Serial.println("\nObsah souboru:");
-
-    while (dataFile.available())
+    fileA.seek(0); // Move the file pointer to the beginning of the file
+    while (fileA.available())
     {
-      out = out + dataFile.read();
+      out = out + fileA.read();
     }
-
-    dataFile.close();
+    fileA.close();
 
     return out;
   }
@@ -194,60 +193,30 @@ String getFileContext()
   }
 }
 
-String getFileContext2()
-{
-  try
-  {
-    String content = "";
-    // xSemaphoreTake(mutex, portMAX_DELAY);
-
-    dataFile = SPIFFS.open(filename, FILE_READ);
-    if (dataFile)
-    {
-      dataFile.seek(0); // Move the file pointer to the beginning of the file
-      while (dataFile.available())
-      {
-        char ch = dataFile.read(); // Read one character
-        content += ch;             // Append character to content
-      }
-      dataFile.close(); // Close the file
-    }
-    // xSemaphoreGive(mutex);
-
-    return content;
-  }
-  catch (const char *error)
-  {
-    throw error;
-    // return error;
-    // Serial.println(error);
-  }
-}
-
-String writeTodataFilendGetContext(String message)
+String writeToFileAndGetContext(String message)
 {
   String out = "";
   try
   {
     // Otevření souboru pro zápis na konec a čtení
-    dataFile = SPIFFS.open(filename, "a+");
-    if (!dataFile)
+    fileA = SPIFFS.open(filename, "a+");
+    if (!fileA)
     {
       throw "Nepodařilo se otevřít soubor.";
     }
 
     // Přidání zprávy do souboru
-    dataFile.write((const uint8_t *)message.c_str(), message.length());
-    dataFile.seek(0); // Přesun na začátek souboru pro čtení
+    fileA.write((const uint8_t *)message.c_str(), message.length());
+    fileA.seek(0); // Přesun na začátek souboru pro čtení
 
     // Čtení obsahu souboru
-    while (dataFile.available())
+    while (fileA.available())
     {
-      out = out + char(dataFile.read());
+      out = out + char(fileA.read());
     }
 
     // Uzavření souboru
-    dataFile.close();
+    fileA.close();
 
     // Vrácení obsahu souboru
     return out;
@@ -264,14 +233,14 @@ void clearFile(const char *_filename)
   try
   {
     // Otevření souboru pro smazání obsahu
-    dataFile = SPIFFS.open(_filename, "w");
-    if (!dataFile)
+    fileA = SPIFFS.open(_filename, "w");
+    if (!fileA)
     {
       throw "Nepodarilo se otevrit soubor pro smazani obsahu.";
     }
 
     // Zavření souboru (smazání obsahu)
-    dataFile.close();
+    fileA.close();
 
     Serial.println("\nObsah souboru byl vymazan.");
   }
@@ -294,7 +263,7 @@ void setup_wifi()
 
   while (WiFi.status() != WL_CONNECTED)
   {
-    delay(500);
+    delay(1000);
     Serial.print(".");
   }
 
@@ -403,20 +372,13 @@ void task1MQTTPublish(void *pvParameters)
 
       // Přidání čísla "0" do společného souboru
       // writeToFile("0");
-      // String msg = getFileContext();
-      // Serial.println("MQTT Data Length: " + String(msg.length()));
-      // Serial.println("MQTT Data: " + msg);
-      // client.publish(mqttTopic, msg.c_str());
+      String msg = getFileContext();
+      Serial.println("MQTT Data Length: " + String(msg.length()));
+      Serial.println("MQTT Data: " + msg);
+      client.publish(mqttTopic, msg.c_str());
       // String msg = "Hello from ESP32 core 0 via MQTT";
-      // String msg = "$GNGGA,133931.746,,,,,0,00,25.5,,,,,,*75\n"
-      //              "$GNGLL,,,,,133931.746,V,M*68\n"
-      //              "$GPGSA,A,1,,,,,,,,,,,,,25.5,25.5,25.5*02\n"
-      //              "$BDGSA,A,1,,,,,,,,,,,,,25.5,25.5,25.5*13\n"
-      //              "$GPTXT,01,01,01,ANTENNA OPEN*25";
-      client.publish(mqttTopic, getFileContext2().c_str());
-      // client.publish(mqttTopic, msg.c_str());
-
-      // client.publish("topic", writeTodataFilendGetContext("0").c_str());
+      // client.publish(mqttTopic, getFileContext().c_str());
+      // client.publish("topic", writeToFileAndGetContext("0").c_str());
 
       // readFile();
 
@@ -451,25 +413,14 @@ void task2BLEadvertise(void *pvParameters)
 
           // myCharacteristic.writeValue("Hello from ESP32");
           std::lock_guard<std::mutex> lock(fileMutex); // Acquire mutex lock before writing to the file
-          // String msg = "$GNGGA,133931.746,,,,,0,00,25.5,,,,,,*75\n"
-          //              "$GNGLL,,,,,133931.746,V,M*68\n"
-          //              "$GPGSA,A,1,,,,,,,,,,,,,25.5,25.5,25.5*02\n"
-          //              "$BDGSA,A,1,,,,,,,,,,,,,25.5,25.5,25.5*13\n"
-          //              "$GPGSV,1,1,02,02,,,22,21,52,285,*42\n"
-          //              "$BDGSV,1,1,04,09,29,087,,11,56,238,,14,46,186,,16,29,063,*6A\n"
-          //              "$GNRMC,133931.746,V,,,,,,,,,,M*5F\n"
-          //              "$GNVTG,,,,,,,,,M*2D\n"
-          //              "$GNZDA,133931.746,,,,,*47\n"
-          //              "$GPTXT,01,01,01,ANTENNA OPEN*25";
 
-          myCharacteristic.writeValue(getFileContext2().c_str());
-          // myCharacteristic.writeValue(msg.c_str());
+          myCharacteristic.writeValue(getFileContext().c_str());
 
           // xSemaphoreGive(mutex);
           //   xSemaphoreTake(mutex, portMAX_DELAY);
 
           //   // writeToFile("1");
-          //   // writeTodataFilendGetContext("1");
+          //   // writeToFileAndGetContext("1");
 
           //   // readFile();
 
@@ -486,126 +437,6 @@ void task2BLEadvertise(void *pvParameters)
   }
 }
 
-// Function to format the GPS data
-String formatGPSData(String input)
-{
-  String output = "";
-
-  // Split the input data into lines
-  int lineStart = 0;
-  while (lineStart < input.length())
-  {
-    int lineEnd = input.indexOf('\n', lineStart);
-    if (lineEnd == -1)
-    {
-      lineEnd = input.length();
-    }
-
-    String line = input.substring(lineStart, lineEnd);
-
-    // Process and filter the lines you need
-    if (line.startsWith("$GNGGA") || line.startsWith("$GNRMC"))
-    {
-      output += line + "\n";
-    }
-
-    lineStart = lineEnd + 1;
-  }
-
-  return output;
-}
-
-struct GPSLocation
-{
-  String time;
-  String latitude;
-  String longitude;
-
-  // Metoda pro převod struktury na řetězec
-  String toString() const
-  {
-    return "Time: " + time + ", Latitude: " + latitude + ", Longitude: " + longitude;
-  }
-};
-
-GPSLocation extractGPSLocation(String data)
-{
-  GPSLocation location;
-  String line;
-  int startIndex, endIndex;
-
-  startIndex = data.indexOf("$GNRMC");
-  if (startIndex == -1)
-  {
-    location.time = "";
-    location.latitude = "";
-    location.longitude = "";
-    return location;
-  }
-
-  endIndex = data.indexOf("\n", startIndex);
-  if (endIndex == -1)
-  {
-    endIndex = data.length();
-  }
-
-  line = data.substring(startIndex, endIndex);
-
-  int commaIndex = 0;
-  for (int i = 0; i < line.length(); i++)
-  {
-    if (line.charAt(i) == ',')
-    {
-      commaIndex++;
-      if (commaIndex == 1)
-      {
-        location.time = line.substring(i + 1, i + 7); // Předpokládáme, že čas má 6 znaků
-      }
-      else if (commaIndex == 3)
-      {
-        location.latitude = line.substring(i + 1, i + 10); // Předpokládáme, že zeměpisná šířka má 9 znaků
-      }
-      else if (commaIndex == 4)
-      {
-        location.latitude += " " + line.charAt(i + 1); // Severní nebo jižní polokoule
-      }
-      else if (commaIndex == 5)
-      {
-        location.longitude = line.substring(i + 1, i + 11); // Předpokládáme, že zeměpisná délka má 10 znaků
-      }
-      else if (commaIndex == 6)
-      {
-        location.longitude += " " + line.charAt(i + 1); // Východní nebo západní polokoule
-        break;
-      }
-    }
-  }
-
-  return location;
-}
-
-String extractGNGLL(String data)
-{
-  static String lastGNGLL = ""; // Statická proměnná pro uchování poslední nalezené hodnoty
-
-  int startIndex = data.indexOf("$GNGLL");
-  if (startIndex == -1)
-  {
-    // Pokud řádek není nalezen, vrátíme poslední nalezenou hodnotu
-    return lastGNGLL;
-  }
-
-  int endIndex = data.indexOf("\n", startIndex);
-  if (endIndex == -1)
-  {
-    endIndex = data.length(); // Pokud konec řádku není nalezen, použijeme konec řetězce
-  }
-
-  String gngll = data.substring(startIndex, endIndex);
-  lastGNGLL = gngll; // Aktualizujeme poslední nalezenou hodnotu
-  return gngll;
-}
-
 void task3UARTcollect(void *pvParameters)
 {
   String receivedData = ""; // Initialize a string to store the received data
@@ -619,31 +450,14 @@ void task3UARTcollect(void *pvParameters)
         char ch = SerialUART.read(); // Read one character
         receivedData += ch;          // Add the character to the receivedData string
       }
-      // Serial.println(receivedData); // Print the received data to the serial monitor
+      Serial.println(receivedData); // Print the received data to the serial monitor
 
       // xSemaphoreTake(mutex, portMAX_DELAY);
       // Write received data to the file
       // dataFile.println(receivedData);
-
-      // Serial.println("-------------------- Received Data --------------------");
-      // Serial.println(receivedData);
-      // Serial.println("-------------------- Formatted Data --------------------");
-      // Serial.println(extractGNGLL(receivedData));
-
-      // Format the GPS data
-      // String formattedData = formatGPSData(receivedData);
-      // // Print the formatted GPS data to the Serial Monitor
-      // Serial.println("-------------------- Formatted Data --------------------");
-      // Serial.println(formattedData);
-
-      // GPSLocation location = extractGPSLocation(receivedData);
-      // Serial.println("-------------------- Formatted Data --------------------");
-      // Serial.println(location.toString()); // Tisk struktury pomocí metody toString()
-
       std::lock_guard<std::mutex> lock(fileMutex); // Acquire mutex lock before writing to the file
-      // writeToFile(receivedData); // bez formátování
-      writeToFile(extractGNGLL(receivedData));
-      // readFile();
+      writeToFile(receivedData);
+
       // xSemaphoreGive(mutex);
     }
   }
@@ -661,8 +475,6 @@ void setup()
 
   // Inicializace mutexu
   // mutex = xSemaphoreCreateMutex();
-
-  // fileMutex = new std::mutex();
 
   // Nastavení pinů pro přerušení jádra 0 a jádra 1
   pinMode(interruptPinCore0, INPUT_PULLUP);

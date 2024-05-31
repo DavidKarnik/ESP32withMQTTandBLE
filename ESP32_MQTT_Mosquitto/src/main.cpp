@@ -3,10 +3,10 @@
 #include <WiFi.h>
 #include <PubSubClient.h> // knihovna https://registry.platformio.org/libraries/knolleary/PubSubClient/installation
 
-const char* ssid = "ssid"; // SSID (WiFi name)
-const char* password = "pass"; // WIFI password
+const char *ssid = "ssid";         // SSID (WiFi name)
+const char *password = "password"; // WIFI password
 // my_mosquitto_broker_IP_address
-const char* mqtt_server = "ip";
+const char *mqtt_server = "ip";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
