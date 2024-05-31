@@ -27,6 +27,7 @@ Akademický rok: 2023/2024 </br>
 ESP32-WROOM-32D devkit </br>
 MQTT communication protocol </br>
 BLE communication protocol </br>
+UART serial comm protocol </br>
 VSCode IDE </br>
 PlatformIO plugin for VSCode </br>
 Arduino libraries </br>
